@@ -1,0 +1,14 @@
+openai==0.28
+google-cloud-vision
+pymupdf
+fastapi
+pydantic
+uvicorn
+pyodbc
+jose
+fastapi
+uvicorn
+google-cloud-vision
+pymupdf
+passlib
+pyjwt

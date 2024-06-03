@@ -1,0 +1,57 @@
+import io
+import fitz  # PyMuPDF
+from google.cloud import vision
+
+# Replace with your Google Cloud project ID (get it from the Cloud Console)
+project_id = "handwritten-422510"
+
+# Authenticate using your API key (replace with yours)
+# Consider using environment variables or secure configuration for production
+api_key = "AIzaSyDkmXh1HsGkpXy-Ak04Yi5rh52w3MhVf1k"
+
+# Create a Vision client object
+client = vision.ImageAnnotatorClient(client_options={"api_key": api_key})
+
+# Path to your PDF file
+pdf_path = "C:\\Users\\sagar\\OneDrive\\Desktop\\images (5).pdf"
+
+# Open the PDF file
+pdf_document = fitz.open(pdf_path)
+
+# Iterate over each page in the PDF
+for page_number in range(len(pdf_document)):
+    # Get the current page
+    page = pdf_document.load_page(page_number)
+    
+    # Convert the page to a PNG image
+    image_bytes = page.get_pixmap().tobytes()
+    
+    # Construct the image object
+    image = vision.Image(content=image_bytes)
+    
+    # Specify the feature (text detection)
+    feature = vision.Feature(type_=vision.Feature.Type.TEXT_DETECTION)
+    
+    # Create the API request
+    request = {"image": image, "features": [feature]}
+    
+    print(f"Sending request to Google Cloud Vision API for page {page_number + 1}...")
+    
+    # Make the API request and handle potential errors
+    try:
+        response = client.annotate_image(request)
+    except Exception as e:
+        print("Error during API request:", e)
+        continue
+    
+    # Extract the detected text from the response
+    texts = response.text_annotations
+    if texts:
+        full_text = texts[0].description
+        print(f"Extracted text from page {page_number + 1}:")
+        print(full_text)
+    else:
+        print(f"No text found in page {page_number + 1}.")
+
+# Close the PDF document
+pdf_document.close()
