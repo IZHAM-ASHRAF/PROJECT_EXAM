@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Home Screen</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f4f8;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        .navbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #554690;
+            padding: 10px 20px;
+            color: white;
+        }
+
+        .navbar img {
+            height: 50px;
+        }
+
+        .container {
+            width: 80%;
+            margin: 20px auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            text-align: center;
+            color: #007bff;
+        }
+
+        .dropdowns {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .dropdowns select, .dropdowns button {
+            margin: 10px 0;
+            padding: 10px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        .dropdowns button {
+            background-color: #554690;
+            color: #fff;
+            cursor: pointer;
+        }
+
+        .dropdowns button:hover {
+            background-color: #554690;
+        }
+
+        .table-container {
+            margin-top: 20px;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #554690;
+            color: white;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <img src="logo.png" alt="Logo">
+        <h2>Admin Portal</h2>
+    </div>
+    <div class="container">
+        <h1>Admin Home Screen</h1>
+        <div class="dropdowns">
+            <select id="courseType">
+                <option value="">Select Course Type</option>
+                <option value="Diploma">Diploma</option>
+                <option value="Degree">Degree</option>
+            </select>
+
+            <select id="course">
+                <option value="">Select Course</option>
+            </select>
+
+            <select id="term">
+                <option value="">Select Term</option>
+                <option value="Semester 1">Semester 1</option>
+                <option value="Semester 2">Semester 2</option>
+                <option value="Semester 3">Semester 3</option>
+                <option value="Semester 4">Semester 4</option>
+                <option value="Semester 5">Semester 5</option>
+                <option value="Semester 6">Semester 6</option>
+            </select>
+
+            <select id="year">
+                <option value="">Select Year</option>
+            </select>
+
+            <select id="subject">
+                <option value="">Select Subject</option>
+            </select>
+
+            <button id="submitBtn">Submit</button>
+        </div>
+        
+        <div class="table-container" id="tableContainer">
+            <!-- Table will be populated here -->
+        </div>
+    </div>
+    <script>
+        async function fetchDropdownData() {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/admin/dropdown_data');
+                if (response.ok) {
+                    const dropdownData = await response.json();
+                    populateDropdown('courseType', dropdownData.courseTypes.map(ct => ct.name));
+                    populateDropdown('course', dropdownData.courses.map(course => course.name));
+                    populateDropdown('term', dropdownData.terms.map(term => term.name));
+                    populateDropdown('year', dropdownData.years.map(year => year.name));
+                    populateDropdown('subject', dropdownData.subjects.map(subject => subject.name));
+                } else {
+                    console.error('Failed to fetch dropdown data');
+                }
+            } catch (error) {
+                console.error('Error fetching dropdown data:', error);
+            }
+        }
+
+        function populateDropdown(dropdownId, options) {
+            const dropdown = document.getElementById(dropdownId);
+            dropdown.innerHTML = '<option value="">Select...</option>';
+            options.forEach(option => {
+                dropdown.innerHTML += `<option value="${option}">${option}</option>`;
+            });
+        }
+
+        function handleTableFiltering() {
+            const submitButton = document.getElementById('submitBtn');
+            submitButton.addEventListener('click', async () => {
+                const selectedFilters = {
+                    courseType: document.getElementById('courseType').value,
+                    course: document.getElementById('course').value,
+                    term: document.getElementById('term').value,
+                    year: document.getElementById('year').value,
+                    subject: document.getElementById('subject').value,
+                };
+                try {
+                    const response = await fetch('http://127.0.0.1:8000/admin/filter_data', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(selectedFilters)
+                    });
+                    if (response.ok) {
+                        const filteredData = await response.json();
+                        populateTable(filteredData);
+                    } else {
+                        console.error('Failed to filter table data');
+                    }
+                } catch (error) {
+                    console.error('Error filtering table data:', error);
+                }
+            });
+        }
+
+        function populateTable(students) {
+            const tableContainer = document.getElementById('tableContainer');
+            let tableHTML = `<table class="fade-in">
+                                <tr>
+                                    <th>Student ID</th>
+                                    <th>Name</th>
+                                    <th>Semester</th>
+                                    <th>Course</th>
+                                    <th>Course Type</th>
+                                    <th>Year</th>
+                                    <th>Subject</th>
+                                    <th>Mark</th>
+                                    <th>Action</th>
+                                </tr>`;
+            students.forEach(student => {
+                tableHTML += `<tr>
+                                <td>${student.student_id}</td>
+                                <td>${student.name}</td>
+                                <td>${student.semester_name}</td>
+                                <td>${student.course_name}</td>
+                                <td>${student.course_type_name}</td>
+                                <td>${student.year_name}</td>
+                                <td>${student.subject_name}</td>
+                                <td>${student.mark ? student.mark : 'N/A'}</td>
+                                <td>${student.mark ? student.mark : '<input type="file" id="fileUpload" /><button onclick="uploadAnswersheet(\'' + student.student_id + '\', \'' + student.subject_id + '\')">Upload</button>'}</td>
+                              </tr>`;
+            });
+            tableHTML += `</table>`;
+            tableContainer.innerHTML = tableHTML;
+        }
+
+        async function fetchAndPopulateTable() {
+            try {
+                const response = await fetch('http://127.0.0.1:8000/admin/students');
+                if (response.ok) {
+                    const students = await response.json();
+                    populateTable(students);
+                } else {
+                    console.error('Failed to fetch student data');
+                }
+            } catch (error) {
+                console.error('Error fetching student data:', error);
+            }
+        }
+
+        async function uploadAnswersheet(studentId, subjectId) {
+            const fileInput = document.getElementById('fileUpload');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert('Please select a file to upload');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('student_id', studentId);
+            formData.append('subject_id', subjectId);
+
+            try {
+                const response = await fetch('http://127.0.0.1:8000/admin/upload_answersheet', {
+                    method: 'POST',
+                    body: formData
+                });
+                if (response.ok) {
+                    alert('Answersheet uploaded successfully');
+                    fetchAndPopulateTable();
+                } else {
+                    console.error('Failed to upload answersheet');
+                }
+            } catch (error) {
+                console.error('Error uploading answersheet:', error);
+            }
+        }
+
+        window.onload = async () => {
+            await fetchDropdownData();
+            await fetchAndPopulateTable();
+            handleTableFiltering();
+        };
+    </script>
+</body>
+</html>

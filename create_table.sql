@@ -22,7 +22,10 @@ CREATE TABLE students (
     student_id NVARCHAR(50) NOT NULL,
     name NVARCHAR(255) NOT NULL,
     semester_id INT NOT NULL,
-    FOREIGN KEY (semester_id) REFERENCES Semester(SemesterId)
+    subject_id INT NOT NULL,
+    FOREIGN KEY (semester_id) REFERENCES Semester(SemesterId),
+    FOREIGN KEY (subject_id) REFERENCES Subject(SubjectId),
+    FOREIGN KEY (year_id) REFERENCES Semester(YearId),
 );
 
 -- Create table for semesters
@@ -53,37 +56,3 @@ CREATE TABLE users (
     password NVARCHAR(255) NOT NULL,
     role NVARCHAR(50) NOT NULL
 );
-
-
---CREATE TABLE marks (
---    id INT IDENTITY(1,1) PRIMARY KEY,
---    student_id INT,
---    subject_name NVARCHAR(255) NOT NULL,
---    marks INT,
---    FOREIGN KEY (student_id) REFERENCES students(id)
---);
---CREATE TABLE students (
---    id INT IDENTITY(1,1) PRIMARY KEY,
---    student_id NVARCHAR(50) UNIQUE NOT NULL,
---    name NVARCHAR(255) NOT NULL,
---    course_id INT,
---    FOREIGN KEY (course_id) REFERENCES courses(id)
---);
---CREATE TABLE courses (
---    id INT IDENTITY(1,1) PRIMARY KEY,
---    course_code NVARCHAR(50) UNIQUE NOT NULL,
---    course_name NVARCHAR(255) NOT NULL
---);
---CREATE TABLE users (
---    id INT IDENTITY(1,1) PRIMARY KEY,
---    email NVARCHAR(255) UNIQUE NOT NULL,
---    password NVARCHAR(255) NOT NULL,
---    role NVARCHAR(10) NOT NULL CHECK(role IN ('admin', 'student'))
---);
---
---CREATE TABLE subjects (
---    id INT IDENTITY(1,1) PRIMARY KEY,
---    course_id INT,
---    subject_name NVARCHAR(255) NOT NULL,
---    FOREIGN KEY (course_id) REFERENCES courses(id)
---);
