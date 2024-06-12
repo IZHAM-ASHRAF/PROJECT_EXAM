@@ -26,6 +26,35 @@
             height: 50px;
         }
 
+        .loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999; /* Ensure loader is above other elements */
+        }
+
+        .loader::after {
+            content: "";
+            border: 4px solid #f3f3f3; /* Light grey border */
+            border-top: 4px solid #3498db; /* Blue border on top */
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite; /* Spin animation */
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+
         .container {
             width: 80%;
             margin: 20px auto;
@@ -161,6 +190,21 @@
             }
         }
 
+        function showLoader() {
+            // Create loader element
+            const loader = document.createElement('div');
+            loader.id = 'loader';
+            loader.classList.add('loader');
+            document.body.appendChild(loader);
+        }
+
+        function hideLoader() {
+            const loader = document.getElementById('loader');
+            if (loader) {
+                loader.remove(); // Remove loader element
+            }
+        }
+
         function populateDropdown(dropdownId, options) {
             const dropdown = document.getElementById(dropdownId);
             dropdown.innerHTML = '<option value="">Select...</option>';
@@ -215,16 +259,16 @@
                                 </tr>`;
             students.forEach(student => {
                 tableHTML += `<tr>
-                                <td>${student.student_id}</td>
-                                <td>${student.name}</td>
-                                <td>${student.semester_name}</td>
-                                <td>${student.course_name}</td>
-                                <td>${student.course_type_name}</td>
-                                <td>${student.year_name}</td>
-                                <td>${student.subject_name}</td>
-                                <td>${student.mark ? student.mark : 'N/A'}</td>
-                                <td>${student.mark ? student.mark : '<input type="file" id="fileUpload" /><button onclick="uploadAnswersheet(\'' + student.student_id + '\', \'' + student.subject_id + '\')">Upload</button>'}</td>
-                              </tr>`;
+                    <td>${student.student_id}</td>
+                    <td>${student.name}</td>
+                    <td>${student.semester_name}</td>
+                    <td>${student.course_name}</td>
+                    <td>${student.course_type_name}</td>
+                    <td>${student.year_name}</td>
+                    <td>${student.subject_name}</td>
+                    <td>${student.marks}</td>
+                    <td>${student.marks === 'N/A' ? `<input type="file" id="fileUpload_${student.student_id}" /><button onclick="uploadAnswersheet('${student.student_id}', '${student.subject_id}')">Upload</button>` : ''}</td>
+                  </tr>`;
             });
             tableHTML += `</table>`;
             tableContainer.innerHTML = tableHTML;
@@ -245,7 +289,7 @@
         }
 
         async function uploadAnswersheet(studentId, subjectId) {
-            const fileInput = document.getElementById('fileUpload');
+            const fileInput = document.getElementById('fileUpload_' + studentId);
             const file = fileInput.files[0];
 
             if (!file) {
@@ -253,10 +297,14 @@
                 return;
             }
 
+            showLoader();
+
             const formData = new FormData();
             formData.append('file', file);
             formData.append('student_id', studentId);
-            formData.append('subject_id', subjectId);
+            formData.append('subject_id', parseInt(subjectId));
+
+            console.log(formData.get('subject_id'));
 
             try {
                 const response = await fetch('http://127.0.0.1:8000/admin/upload_answersheet', {
@@ -271,8 +319,12 @@
                 }
             } catch (error) {
                 console.error('Error uploading answersheet:', error);
+            } finally {
+                // Hide loader
+                hideLoader();
             }
         }
+
 
         window.onload = async () => {
             await fetchDropdownData();

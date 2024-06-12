@@ -4,12 +4,13 @@ from pydantic import BaseModel
 from typing import List
 import fitz  # PyMuPDF
 import re
+from typing import Optional
 import openai
 from google.cloud import vision
 from fastapi.middleware.cors import CORSMiddleware
 
 # Set your OpenAI and Google Cloud Vision API keys here
-openai.api_key = ''
+openai.api_key = '  '
 google_api_key = ''
 
 # Initialize the Google Cloud Vision client
@@ -60,6 +61,7 @@ class Student(BaseModel):
     semester_id: int
     subject_id: int
     year_id: int
+    email: str
 
 class DetailedStudent(BaseModel):
     student_id: str
@@ -68,7 +70,9 @@ class DetailedStudent(BaseModel):
     semester_name: str
     course_type_name: str
     year_name: str
+    subject_id: int
     subject_name: str
+    marks: Optional[str] = None
 
 
 class DetailedMarks(BaseModel):
@@ -197,30 +201,40 @@ async def register(email: str, password: str, role: str):
     conn.close()
     return {"message": "User registered successfully"}
 
+
 @app.get("/admin/students", response_model=List[DetailedStudent])
 async def get_all_students():
     query = """
-        SELECT s.student_id, s.name, sem.SemesterName, c.CourseName, ct.CourseTypeName, y.YearName, sub.SubjectName
+        SELECT s.student_id, s.name, sem.SemesterName, c.CourseName, ct.CourseTypeName, y.YearName, sub.SubjectName, sub.SubjectId, m.Marks
         FROM Students s
         JOIN Semester sem ON s.semester_id = sem.SemesterId
         JOIN Course c ON sem.CourseId = c.CourseId
         JOIN CourseType ct ON c.CourseTypeId = ct.CourseTypeId
         JOIN Year y ON s.YearId = y.YearId
         LEFT JOIN Subject sub ON s.subject_id = sub.SubjectId
+        LEFT JOIN Marks m ON s.student_id = m.StudentId AND s.subject_id = m.SubjectId
         ORDER BY s.student_id ASC
         """
 
     students = fetch_all(query, ())
-    return [{
-        "student_id": student[0],
-        "name": student[1],
-        "semester_name": student[2],
-        "course_name": student[3],
-        "course_type_name": student[4],
-        "year_name": student[5],
-        "subject_name": student[6] if student[6] else "N/A"
-    } for student in students]
-
+    detailed_students = []
+    for student in students:
+        student_id, name, semester_name, course_name, course_type_name, year_name, subject_name, subject_id, marks = student
+        # Convert marks to string if it's not None
+        marks_str = str(marks) if marks is not None else "N/A"
+        detailed_student = DetailedStudent(
+            student_id=student_id,
+            name=name,
+            semester_name=semester_name,
+            course_name=course_name,
+            course_type_name=course_type_name,
+            year_name=year_name,
+            subject_name=subject_name if subject_name else "N/A",
+            subject_id=subject_id,
+            marks=marks_str
+        )
+        detailed_students.append(detailed_student)
+    return detailed_students
 
 @app.get("/admin/student_marks/{student_id}/details", response_model=List[DetailedMarks])
 async def get_student_marks_details(student_id: str):
@@ -289,12 +303,7 @@ async def upload_answersheet(
         file: UploadFile = File(...),
         student_id: str = Form(...),
         subject_id: int = Form(...),
-        email: str = Form(...)
 ):
-    user = get_user(email)
-    if not user or user["role"] != "admin":
-        raise HTTPException(status_code=403, detail="Not authorized")
-
     pdf_bytes = await file.read()
     extracted_text = extract_text_from_pdf(pdf_bytes)
     qa_pairs = extract_qa_pairs(extracted_text)
@@ -414,8 +423,8 @@ async def create_subject(subject: Subject):
 async def add_student(student: Student):
     conn = pyodbc.connect(DATABASE_CONNECTION_STRING)
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO students (student_id, name, semester_id, subject_id, YearId) VALUES (?, ?, ?, ?, ?)",
-                   (student.student_id, student.name, student.semester_id, student.subject_id, student.year_id))
+    cursor.execute("INSERT INTO students (student_id, name, semester_id, subject_id, YearId, Email) VALUES (?, ?, ?, ?, ?, ?)",
+                   (student.student_id, student.name, student.semester_id, student.subject_id, student.year_id, student.email))
     conn.commit()
     conn.close()
     return student
@@ -445,7 +454,7 @@ async def get_dropdown_data():
     return dropdown_data
 
 
-@app.post("/admin/filter_data")
+@app.post("/admin/filter_data", response_model=List[DetailedStudent])
 async def filter_data(filters: dict):
     course_type = filters.get("courseType")
     course = filters.get("course")
@@ -454,13 +463,14 @@ async def filter_data(filters: dict):
     subject = filters.get("subject")
 
     base_query = """
-        SELECT s.student_id, s.Name, sem.SemesterName, c.CourseName, ct.CourseTypeName, y.YearName, sub.SubjectName
+        SELECT s.student_id, s.Name, sem.SemesterName, c.CourseName, ct.CourseTypeName, y.YearName, sub.SubjectName, sub.SubjectId, m.Marks
         FROM Students s
         JOIN Semester sem ON s.semester_id = sem.SemesterId
         JOIN Course c ON sem.CourseId = c.CourseId
         JOIN CourseType ct ON c.CourseTypeId = ct.CourseTypeId
         JOIN Year y ON s.YearId = y.YearId
         LEFT JOIN Subject sub ON s.subject_id = sub.SubjectId
+        LEFT JOIN Marks m ON s.student_id = m.StudentId AND s.subject_id = m.SubjectId
         WHERE 1=1
     """
 
@@ -486,16 +496,22 @@ async def filter_data(filters: dict):
     print("With Parameters: ", params)
 
     students = fetch_all(base_query, params)
-    return [{
-        "student_id": student[0],
-        "name": student[1],
-        "semester_name": student[2],
-        "course_name": student[3],
-        "course_type_name": student[4],
-        "year_name": student[5],
-        "subject_name": student[6]
-    } for student in students]
-
+    detailed_students = []
+    for student in students:
+        student_id, name, semester_name, course_name, course_type_name, year_name, subject_name, subject_id, marks = student
+        detailed_student = DetailedStudent(
+            student_id=student_id,
+            name=name,
+            semester_name=semester_name,
+            course_name=course_name,
+            course_type_name=course_type_name,
+            year_name=year_name,
+            subject_name=subject_name if subject_name else "N/A",
+            subject_id=subject_id,
+            marks=str(marks) if marks is not None else "N/A"
+        )
+        detailed_students.append(detailed_student)
+    return detailed_students
 
 @app.get("/admin/subjects", response_model=List[Subject])
 async def get_all_subjects():
