@@ -23,6 +23,7 @@ CREATE TABLE students (
     name NVARCHAR(255) NOT NULL,
     semester_id INT NOT NULL,
     subject_id INT NOT NULL,
+    Email NVARCHAR(255) NOT NULL,
     FOREIGN KEY (semester_id) REFERENCES Semester(SemesterId),
     FOREIGN KEY (subject_id) REFERENCES Subject(SubjectId),
     FOREIGN KEY (year_id) REFERENCES Semester(YearId),

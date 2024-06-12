@@ -194,14 +194,10 @@
     <div class="container">
         <div class="login-section">
             <div class="login-box">
+                <img src="logo.png" width="100">
                 <h1>Admin Portal</h1>
                 <h2>Log in to your Account</h2>
-                <p>Welcome back! Select method to log in:</p>
-                <div class="social-login">
-                    <button class="social-btn google">Google</button>
-                    <button class="social-btn facebook">Facebook</button>
-                </div>
-                <p>or continue with email</p>
+                <p>Welcome back! Log in with your email:</p>
                 <form id="login-form">
                     <input type="email" id="email" placeholder="Email" required>
                     <input type="password" id="password" placeholder="Password" required>
@@ -249,6 +245,7 @@
 
                 if (response.ok) {
                     const user = await response.json();
+                    localStorage.setItem('user_email', email);
                     alert('Login successful!'); // Optionally keep this for debug purposes
                     window.location.href = 'table.html';
                 } else {
@@ -259,6 +256,12 @@
                 alert(`An error occurred: ${error.message}`);
             }
         });
+
+        // Check if user email exists in local storage and replace it if it does
+        const userEmail = localStorage.getItem('user_email');
+        if (userEmail) {
+            localStorage.setItem('user_email', userEmail);
+        }
     </script>
 </body>
 </html>

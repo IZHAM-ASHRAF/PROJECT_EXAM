@@ -10,7 +10,7 @@ from google.cloud import vision
 from fastapi.middleware.cors import CORSMiddleware
 
 # Set your OpenAI and Google Cloud Vision API keys here
-openai.api_key = '  '
+openai.api_key = ''
 google_api_key = ''
 
 # Initialize the Google Cloud Vision client
@@ -298,12 +298,51 @@ async def get_student_marks_details(student_id: str):
 
     return detailed_marks
 
+@app.get("/user/students/{email}", response_model=List[DetailedStudent])
+async def get_student_by_email(email: str):
+    query = """
+        SELECT s.student_id, s.name, sem.SemesterName, c.CourseName, ct.CourseTypeName, y.YearName, sub.SubjectName, sub.SubjectId, m.Marks
+        FROM Students s
+        JOIN Semester sem ON s.semester_id = sem.SemesterId
+        JOIN Course c ON sem.CourseId = c.CourseId
+        JOIN CourseType ct ON c.CourseTypeId = ct.CourseTypeId
+        JOIN Year y ON s.YearId = y.YearId
+        LEFT JOIN Subject sub ON s.subject_id = sub.SubjectId
+        LEFT JOIN Marks m ON s.student_id = m.StudentId AND s.subject_id = m.SubjectId
+        WHERE s.Email = ?
+        ORDER BY s.student_id ASC
+        """
+
+    students = fetch_all(query, (email,))
+    detailed_students = []
+    for student in students:
+        student_id, name, semester_name, course_name, course_type_name, year_name, subject_name, subject_id, marks = student
+        marks_str = str(marks) if marks is not None else "N/A"
+        detailed_student = DetailedStudent(
+            student_id=student_id,
+            name=name,
+            semester_name=semester_name,
+            course_name=course_name,
+            course_type_name=course_type_name,
+            year_name=year_name,
+            subject_name=subject_name if subject_name else "N/A",
+            subject_id=subject_id,
+            marks=marks_str
+        )
+        detailed_students.append(detailed_student)
+    return detailed_students
+
 @app.post("/admin/upload_answersheet", response_model=List[Marks])
 async def upload_answersheet(
         file: UploadFile = File(...),
         student_id: str = Form(...),
         subject_id: int = Form(...),
+        email: str = Form(...)
 ):
+    user = get_user(email)
+    if not user or user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+
     pdf_bytes = await file.read()
     extracted_text = extract_text_from_pdf(pdf_bytes)
     qa_pairs = extract_qa_pairs(extracted_text)
