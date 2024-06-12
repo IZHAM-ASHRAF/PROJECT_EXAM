@@ -182,7 +182,7 @@ def check_answers(qa_pairs):
     return score
 
 # Routes
-@app.post("/login", response_model=User)
+@app.post("/admin/login", response_model=User)
 async def login(email: str = Form(...), password: str = Form(...)):
     user = authenticate_user(email, password)
     if not user:
@@ -190,6 +190,22 @@ async def login(email: str = Form(...), password: str = Form(...)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
         )
+    user = get_user(email)
+    if not user or user["role"] != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized")
+    return user
+
+@app.post("/user/login", response_model=User)
+async def login(email: str = Form(...), password: str = Form(...)):
+    user = authenticate_user(email, password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+        )
+    user = get_user(email)
+    if not user or user["role"] != "user":
+        raise HTTPException(status_code=403, detail="Not authorized")
     return user
 
 @app.post("/register")
