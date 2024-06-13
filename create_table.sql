@@ -4,11 +4,6 @@ CREATE TABLE CourseType (
     CourseTypeName VARCHAR(100) NOT NULL
 );
 
-CREATE TABLE Year (
-    YearId INT PRIMARY KEY IDENTITY(1, 1),
-    YearName VARCHAR(50) NOT NULL
-);
-
 -- Create table for courses
 CREATE TABLE Course (
     CourseId INT PRIMARY KEY IDENTITY(1,1),
@@ -17,16 +12,9 @@ CREATE TABLE Course (
     CourseTypeId INT FOREIGN KEY REFERENCES CourseType(CourseTypeId)
 );
 
-CREATE TABLE students (
-    id INT PRIMARY KEY IDENTITY(1,1),
-    student_id NVARCHAR(50) NOT NULL,
-    name NVARCHAR(255) NOT NULL,
-    semester_id INT NOT NULL,
-    subject_id INT NOT NULL,
-    Email NVARCHAR(255) NOT NULL,
-    FOREIGN KEY (semester_id) REFERENCES Semester(SemesterId),
-    FOREIGN KEY (subject_id) REFERENCES Subject(SubjectId),
-    FOREIGN KEY (year_id) REFERENCES Semester(YearId),
+CREATE TABLE Year (
+    YearId INT PRIMARY KEY IDENTITY(1, 1),
+    YearName VARCHAR(50) NOT NULL
 );
 
 -- Create table for semesters
@@ -41,6 +29,19 @@ CREATE TABLE Subject (
     SubjectId INT PRIMARY KEY IDENTITY(1,1),
     SubjectName VARCHAR(100) NOT NULL,
     SemesterId INT FOREIGN KEY REFERENCES Semester(SemesterId)
+);
+
+CREATE TABLE students (
+    id INT PRIMARY KEY IDENTITY(1,1),
+    student_id NVARCHAR(50) NOT NULL,
+    name NVARCHAR(255) NOT NULL,
+    semester_id INT NOT NULL,
+    YearId INT NOT NULL,
+    subject_id INT NOT NULL,
+    Email NVARCHAR(255) NOT NULL,
+    FOREIGN KEY (semester_id) REFERENCES Semester(SemesterId),
+    FOREIGN KEY (subject_id) REFERENCES Subject(SubjectId),
+    FOREIGN KEY (YearId) REFERENCES Year(YearId),
 );
 
 -- Create table for student marks

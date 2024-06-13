@@ -155,7 +155,24 @@ def extract_qa_pairs(text: str):
     return qa_pairs
 
 def check_answer_with_openai(question, extracted_answer):
-    prompt = f"Question: {question}\nExtracted Answer: {extracted_answer}\nIs the extracted answer correct? If not, provide the correct answer."
+    # Determine the mark based on the question number
+    if question.startswith("1."):
+        mark = 2
+    elif question.startswith("2."):
+        mark = 3
+    elif question.startswith("4."):
+        mark = 4
+    else:
+        mark = 0  # Default mark if the question number does not match any pattern
+
+    # Explicitly instruct the model to score out of the total marks
+    prompt = (
+        f"Question: {question}\n"
+        f"Extracted Answer: {extracted_answer}\n"
+        f"Is the extracted answer correct? Please evaluate the answer out of a total score of {mark} points, "
+        f"and provide the evaluation as a score out of {mark} points. Provide a detailed explanation."
+    )
+
     response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
         messages=[
@@ -163,6 +180,7 @@ def check_answer_with_openai(question, extracted_answer):
             {"role": "user", "content": prompt}
         ]
     )
+
     return response.choices[0].message['content'].strip()
 
 def check_answers(qa_pairs):
@@ -374,7 +392,6 @@ async def upload_answersheet(
     conn.close()
 
     return [{"student_id": student_id, "subject_id": mark[0], "marks": mark[1]} for mark in student_marks]
-
 
 @app.post("/admin/semesters", response_model=Semester)
 async def add_semester(semester: Semester):
